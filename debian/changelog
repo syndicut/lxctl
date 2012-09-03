@@ -1,3 +1,9 @@
+lxctl (0.3.3) lucid; urgency=low
+
+  * Moved all modules to /usr/share/perl5/
+
+ -- Pavel Potapenkov <oxcd8o@yandex-team.ru>  Fri, 20 Jul 2012 20:54:12 +0400
+
 lxctl (0.3.2-1) lucid; urgency=low
 
   * Fix against teran
@@ -9,6 +15,12 @@ lxctl (0.3.2) lucid; urgency=low
   * Added rename module
 
  -- Pavel Potapenkov <oxcd8o@yandex-team.ru>  Fri, 25 May 2012 20:24:14 +0400
+
+lxctl (0.3.1-20) lucid; urgency=low
+
+  * Added plugin for backup containers.
+
+ -- root <root@paulus.dev.yandex.net>  Mon, 25 Jun 2012 16:14:07 +0400
 
 lxctl (0.3.1-19) lucid; urgency=low
 

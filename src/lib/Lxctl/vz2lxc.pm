@@ -30,13 +30,13 @@ sub migrate_get_opt
 	$options{'remuser'} ||= 'root';
 	$options{'remport'} ||= '22';
 	$options{'afterstart'} ||= 0;
-	$options{'rootsz'} ||= (`echo -n \$(ssh $options{'remuser'}\@$options{'fromhost'} "egrep DISKSPACE /etc/vz/conf/$options{'remname'}.conf | cut -d= -f2 | cut -d: -f1 | cut -d'\\"' -f2")`) . "K";
+	$options{'rootsz'} ||= (`echo -n \$(ssh $options{'remuser'}\@$options{'fromhost'} "egrep DISKSPACE /etc/vz/conf/$options{'remname'}.conf | cut -d= -f2 | cut -d: -f1 | cut -d'\\"' -f2")` || 0) / 1024 || '30G';
 
 	defined($options{'remname'})
 		or die "You should specify the name of the VZ container!\n\n";
 
 	defined($options{'fromhost'}) or 
-		die "To which host shold I migrate?\n\n";
+		die "To which host should I migrate?\n\n";
 }
 
 sub re_rsync
@@ -76,7 +76,7 @@ sub vz_migrate
 
 	print "Rsync'ing VZ container...\n";
 
-	print "There were some errors during rsyncing root filesystem. It's definetely NOT okay if it was the only rsync pass.\n\n"
+	print "There were some errors during rsyncing root filesystem. It's definitely NOT okay if it was the only rsync pass.\n\n"
 		if system("rsync $rsync_opts -e ssh $options{'remuser'}\@$options{'fromhost'}:/var/lib/vz/root/$options{'remname'}/ $root_mount_path/$options{'contname'}/rootfs/ 1>/dev/null");
 
 	$self->re_rsync();
