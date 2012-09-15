@@ -7,6 +7,8 @@ use autodie qw(:all);
 use Getopt::Long;
 use Digest::SHA qw(sha1_hex);
 use Linux::LVM;
+use Net::IP;
+use Config::Augeas;
 
 use Lxc::object;
 
@@ -84,19 +86,70 @@ sub set_hostname
 	return;
 }
 
-sub set_ipaddr
+sub _set_ipaddr
 {
-	my $self = shift;
+	my ($self, $family) = @_;
+	my $key = $family=='inet6' ? 'ip6addr' : 'ipaddr';
+	my $name = $family=='inet6' ? 'IPv6' : 'IP';
 
-	defined($options{'ipaddr'}) or return;
-	if ($options{'ipaddr'} =~ m/\d+\.\d+\.\d+\.\d+\/(\d+)/ ) {
+	defined($options{$key}) or return;
+
+	my $ip = $options{$key};
+
+	if ($family == 'inet' and $ip =~ m/\d+\.\d+\.\d+\.\d+\/(\d+)/ ) {
 		my $netmask = $self->{'helper'}->cidr2ip($1);
 		$options{'netmask'} = $netmask;
 	}
 
-	print "Setting IP: $options{'ipaddr'}\n";
+	print "Setting $name: $ip\n";
 
-	$self->{'helper'}->change_config("$root_mount_path/$options{'contname'}/rootfs/etc/network/interfaces", 'address', $options{'ipaddr'});
+	# Setting IPv6 is not possible with current helper's change_config method,
+	# because it is very dumb it will overwrite all the addresses, so we will
+	# not write bicycles and will use Augeas library.
+	# We should really consider moving to it some day for all config changes
+	my $aug = Config::Augeas->new( root => "$root_mount_path/$options{'contname'}/rootfs/" );
+	my $ifname = $self->{'lxc'}->get_conf($options{'contname'}, "lxc.network.name");
+	my $iface = '/files/etc/network/interfaces/iface';
+
+	if ($aug->count_match("$iface[.=$ifname and family=$family]") == 0)
+	{
+		my $path = "$iface[01]"
+	}
+	else
+	{
+		my @paths = $aug->match("$iface[.=$ifname and family=$family]");
+		my $path = $paths[0];
+	}
+
+	$aug->set($path, $ifname);
+	$aug->set("$path/family", $family);
+	$aug->set("$path/method", 'static');
+	if ($family == 'inet6') {
+		# IPv6 should always come with CIDR mask. Why? Because f#$k you, that's why!
+		my $parsed_ip = new Net::IP ($ip, 6) or die (Net::IP::Error());
+		$ip = $parsed_ip->ip();
+		$aug->set("$path/netmask", $parsed_ip->mask());
+	}
+	$aug->set("$path/address", $ip);
+	$aug->save();
+
+	return;
+}
+
+sub set_ipaddr
+{
+	my $self = shift;
+
+	$self->_set_ipaddr('inet');
+
+	return;
+}
+
+sub set_ip6addr
+{
+	my $self = shift;
+
+	$self->_set_ipaddr('inet6');
 
 	return;
 }

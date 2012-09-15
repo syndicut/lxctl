@@ -13,6 +13,7 @@ use LxctlHelpers::config;
 use LxctlHelpers::helper;
 use Data::UUID;
 use File::Path;
+use Net::IP;
 
 my $config = new LxctlHelpers::config;
 my $helper = new LxctlHelpers::helper;
@@ -110,7 +111,7 @@ sub check_create_options
 	my $self = shift;
 	$Getopt::Long::passthrough = 1;
 
-	GetOptions(\%options, 'ipaddr=s', 'hostname=s', 'ostemplate=s', 
+	GetOptions(\%options, 'ipaddr=s', 'ip6addr:s', 'hostname=s', 'ostemplate=s', 
 		'config=s', 'roottype=s', 'root=s', 'rootsz=s', 'netmask|mask=s',
 		'defgw|gw=s', 'dns=s', 'macaddr=s', 'autostart=s', 'empty!',
 		'save!', 'load=s', 'debug', 'searchdomain=s', 'tz=s',
@@ -159,6 +160,10 @@ sub check_create_options
 
 	if ($options{'empty'} == 0) {
 		$options{'ipaddr'} || print "You did not specify IP address! Using default.\n";
+		if ($options{'ip6addr'}) {
+			# IPv6 should always come with CIDR mask
+			new Net::IP($options{'ip6addr'}, 6) or die (Net::IP::Error());
+		}
 		if (! $options{'ipaddr'} =~ m/\d+\.\d+\.\d+\.\d+\/\d+/ ) {
 			$options{'netmask'} || print "You did not specify network mask! Using default.\n";
 		}
@@ -326,6 +331,7 @@ sub do
 		$self->create_ssh_keys();
 
 		$setter->set_ipaddr();
+		$setter->set_ip6addr();
 		$setter->set_netmask();
 		$setter->set_defgw();
 		$setter->set_dns();
