@@ -3,5 +3,9 @@
     daily
     compress
     missingok
+    postrotate
+	fileslist=`lsof +L1 2>/dev/null | grep lxc-start | awk '{ gsub(/[^0-9]*/, "", $4); print "/proc/"$2"/fd/"$4" "$9 }' | sort -k2 | uniq -f1 | cut -d' ' -f1 | xargs`
+	cat $fileslist > /var/log/lxc.log.1
+	truncate --size 0 $fileslist
+    endscript
 }
-
